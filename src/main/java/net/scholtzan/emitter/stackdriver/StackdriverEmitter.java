@@ -3,31 +3,24 @@ package net.scholtzan.emitter.stackdriver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.monitoring.v3.MetricServiceClient;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 public class StackdriverEmitter implements Emitter {
 
     private static final Logger log = new Logger(StackdriverEmitter.class);
     private static final char DRUID_METRIC_SEPARATOR = '/';
 
-    private final MetricServiceClient stackdriverClient;
-    private final StackdriverEmitterConfig config;
     private final StackdriverSender sender;
     private final EventConverter converter;
     private final AtomicBoolean started = new AtomicBoolean(false);
 
     public StackdriverEmitter(MetricServiceClient client, StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
-        this.stackdriverClient = client;
-        this.config = config;
         this.sender = new StackdriverSender(
                 config.getHost(),
                 config.getPort(),
@@ -58,7 +51,6 @@ public class StackdriverEmitter implements Emitter {
     @Override
     public void emit(Event event) {
         if (!started.get()) {
-            // todo: throw exception?
             log.error("emit() called before service was started.");
         } else {
             if (event instanceof ServiceMetricEvent) {

@@ -10,7 +10,6 @@ import com.google.protobuf.util.Timestamps;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +17,8 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 public class StackdriverSender {
+    private static final String CUSTOM_METRIC_DOMAIN = "custom.googleapis.com/";
+
     private static final Logger log = new Logger(StackdriverSender.class);
     private final ScheduledExecutorService scheduler;
     private final long consumeDelay;
@@ -62,7 +63,8 @@ public class StackdriverSender {
     }
 
     public void flush() {
-        // todo
+        //todo: FLUSH_TIMEOUT?
+        consumer.sendEvents();
     }
 
     public void close() {
@@ -108,7 +110,7 @@ public class StackdriverSender {
                         Map<String, String> metricLabels = event.getMetricLabels();
 
                         Metric metric = Metric.newBuilder()
-                                .setType("custom.googleapis.com/" + event.getEventPath())
+                                .setType(CUSTOM_METRIC_DOMAIN + event.getEventPath())
                                 .putAllLabels(metricLabels)
                                 .build();
 
