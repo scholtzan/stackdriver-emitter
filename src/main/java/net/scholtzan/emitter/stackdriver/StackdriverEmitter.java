@@ -10,6 +10,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Stack;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 public class StackdriverEmitter implements Emitter {
@@ -19,57 +21,65 @@ public class StackdriverEmitter implements Emitter {
 
     private final MetricServiceClient stackdriverClient;
     private final StackdriverEmitterConfig config;
+    private final StackdriverSender sender;
+    private final EventConverter converter;
+    private final AtomicBoolean started = new AtomicBoolean(false);
 
-    public StackdriverEmitter(MetricServiceClient client, StackdriverEmitterConfig config) {
+    public StackdriverEmitter(MetricServiceClient client, StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
         this.stackdriverClient = client;
         this.config = config;
+        this.sender = new StackdriverSender(
+                config.getHost(),
+                config.getPort(),
+                config.getFlushThreshold(),
+                config.getMaxQueueSize(),
+                config.getConsumeDelay(),
+                config.getProjectId()
+        );
+        this.converter = new EventConverter(mapper, config.getMetricMapPath());
     }
 
-    static StackdriverEmitter of(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException
-    {
+    static StackdriverEmitter of(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
         MetricServiceClient client = MetricServiceClient.create();
-
-//        NonBlockingStackdriverClient client = new NonBlockingStackdriverClient(
-//            config.getPrefix(),
-//            config.getHostname(),
-//            config.getPort(),
-//            new StackdriverClientErrorHandler()
-//            {
-//                private int exceptionCount = 0;
-//
-//                @Override
-//                public void handle(Exception exception)
-//                {
-//                    if (exceptionCount % 1000 == 0) {
-//                        log.error(exception, "Error sending metric to Stackdriver.");
-//                    }
-//                    exceptionCount += 1;
-//                }
-//            }
-//        );
-//        return new StackdriverEmitter(config, mapper, client);
-
-        return new StackdriverEmitter(client, config);
+        return new StackdriverEmitter(client, config, mapper);
     }
 
     @Override
-    public void start() { }
-
-    @Override
-    public void emit(Event event) {
-        if (event instanceof ServiceMetricEvent) {
-            ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
-            String host = metricEvent.getHost();
-            String service = metricEvent.getService();
-            String metric = metricEvent.getMetric();
-            Map<String, Object> userDims = metricEvent.getUserDims();
-            Number value = metricEvent.getValue();
+    public void start() {
+        synchronized (started) {
+            if (!started.get()) {
+                log.info("Start Stackdriver emitter.");
+                sender.start();
+                started.set(true);
+            }
         }
     }
 
     @Override
-    public void flush() { }
+    public void emit(Event event) {
+        if (!started.get()) {
+            // todo: throw exception?
+            log.error("emit() called before service was started.");
+        } else {
+            if (event instanceof ServiceMetricEvent) {
+                StackdriverEvent metricEvent = converter.convert((ServiceMetricEvent) event);
+
+                if (metricEvent != null) {
+                    sender.enqueue(metricEvent);
+                } else {
+                    log.info("Event not configured to be emitted to Stackdriver: " + ((ServiceMetricEvent) event).getMetric());
+                }
+            }
+        }
+    }
 
     @Override
-    public void close() { }
+    public void flush() {
+        sender.flush();
+    }
+
+    @Override
+    public void close() {
+        sender.close();
+    }
 }

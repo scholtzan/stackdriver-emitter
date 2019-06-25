@@ -28,21 +28,19 @@ public class StackdriverSender {
     private final ProjectName projectName;
 
     public StackdriverSender(
-        String host,
-        int port,
-        int connectionTimeout,
-        int readTimeout,
-        int flushThreshold,
-        int maxQueueSize,
-        long consumeDelay,
-        String projectId) throws IOException {
+            String host,
+            int port,
+            int flushThreshold,
+            int maxQueueSize,
+            long consumeDelay,
+            String projectId) throws IOException {
         this.flushThreshold = flushThreshold;
         this.consumeDelay = consumeDelay;
         this.eventQueue = new ArrayBlockingQueue<StackdriverEvent>(maxQueueSize);
         this.scheduler = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
-            .setDaemon(true)
-            .setNameFormat("Stackdriver-%s")
-            .build());
+                .setDaemon(true)
+                .setNameFormat("Stackdriver-%s")
+                .build());
         this.stackdriverClient = MetricServiceClient.create();
         this.consumer = new EventConsumer();
         this.projectName = ProjectName.of(projectId);
@@ -50,11 +48,27 @@ public class StackdriverSender {
 
     public void start() {
         scheduler.scheduleWithFixedDelay(
-            consumer,
-            consumeDelay,
-            consumeDelay,
-            TimeUnit.MILLISECONDS
+                consumer,
+                consumeDelay,
+                consumeDelay,
+                TimeUnit.MILLISECONDS
         );
+    }
+
+    public void enqueue(StackdriverEvent event) {
+        if (!eventQueue.offer(event)) {
+            log.error("Error enqueueing event: " + event);
+        }
+    }
+
+    public void flush() {
+        // todo
+    }
+
+    public void close() {
+        flush();
+        stackdriverClient.close();
+        scheduler.shutdown();
     }
 
     private class EventConsumer implements Runnable {
@@ -80,18 +94,18 @@ public class StackdriverSender {
             if (!events.isEmpty()) {
                 // todo: events of the same metric can be put into one time series
 
-                for (StackdriverEvent event: events) {
+                for (StackdriverEvent event : events) {
                     try {
                         TimeInterval interval = TimeInterval.newBuilder()
-                            .setEndTime(Timestamps.fromMillis(event.getTimestamp()))
-                            .build();
+                                .setEndTime(Timestamps.fromMillis(event.getTimestamp()))
+                                .build();
 
                         Point point = Point.newBuilder()
                                 .setInterval(interval)
-                                .setValue(TypedValue.parseFrom(event.getValue().getBytes()))
+                                .setValue(TypedValue.parseFrom(event.getValue().toString().getBytes()))
                                 .build();
 
-                        Map<String, String> metricLabels = new HashMap<String, String>();
+                        Map<String, String> metricLabels = event.getMetricLabels();
 
                         Metric metric = Metric.newBuilder()
                                 .setType("custom.googleapis.com/" + event.getEventPath())
