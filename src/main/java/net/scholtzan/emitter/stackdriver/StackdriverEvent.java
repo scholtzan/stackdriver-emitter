@@ -14,8 +14,8 @@ public class StackdriverEvent {
     public StackdriverEvent(
             @NotNull String eventPath,
             @NotNull Number value,
-            @NotNull Long timestamp, HashMap<String,
-            String> metricLabels
+            @NotNull Long timestamp,
+            HashMap<String, String> metricLabels
     ) {
         this.eventPath = Preconditions.checkNotNull(eventPath);
         this.value = Preconditions.checkNotNull(value);
@@ -37,5 +37,22 @@ public class StackdriverEvent {
 
     public HashMap<String, String> getMetricLabels() {
         return metricLabels;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        StackdriverEvent that = (StackdriverEvent) o;
+
+        return getEventPath().equals(that.getEventPath()) &&
+                getValue().equals(that.getValue()) &&
+                getMetricLabels() == that.getMetricLabels() &&
+                getTimestamp() == that.getTimestamp();
     }
 }

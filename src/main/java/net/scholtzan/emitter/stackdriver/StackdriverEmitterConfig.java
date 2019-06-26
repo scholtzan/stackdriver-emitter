@@ -4,19 +4,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
-import java.util.Objects;
-
 public class StackdriverEmitterConfig {
     @JsonProperty
     private final String hostname;
     @JsonProperty
     private final Integer port;
-    @JsonProperty
-    private final String prefix;
-    @JsonProperty
-    private final String separator;
-    @JsonProperty
-    private final Boolean includeHost;
     @JsonProperty
     private final Integer flushThreshold;
     @JsonProperty
@@ -32,30 +24,19 @@ public class StackdriverEmitterConfig {
     public StackdriverEmitterConfig(
             @JsonProperty("hostname") String hostname,
             @JsonProperty("port") Integer port,
-            @JsonProperty("prefix") String prefix,
-            @JsonProperty("separator") String separator,
-            @JsonProperty("includeHost") Boolean includeHost,
             @JsonProperty("flushThreshold") Integer flushThreshold,
             @JsonProperty("maxQueueSize") Integer maxQueueSize,
             @JsonProperty("consumeDelay") Long consumeDelay,
             @JsonProperty("projectId") String projectId,
             @JsonProperty("metricMapPath") String metricMapPath
     ) {
-        this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
-        this.port = Preconditions.checkNotNull(port, "StatsD port cannot be null.");
-        this.prefix = prefix != null ? prefix : "";
-        this.separator = separator != null ? separator : ".";
-        this.includeHost = includeHost != null ? includeHost : false;
+        this.hostname = Preconditions.checkNotNull(hostname, "Stackdriver hostname cannot be null.");
+        this.port = Preconditions.checkNotNull(port, "Stackdriver port cannot be null.");
         this.flushThreshold = flushThreshold != null ? flushThreshold : 0;
         this.maxQueueSize = maxQueueSize != null ? maxQueueSize : 0;
         this.consumeDelay = consumeDelay != null ? consumeDelay : 0;
         this.projectId = projectId != null ? projectId : "";
         this.metricMapPath = metricMapPath != null ? metricMapPath : "";
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(hostname, port, prefix, separator, includeHost);
     }
 
     @JsonProperty
@@ -66,21 +47,6 @@ public class StackdriverEmitterConfig {
     @JsonProperty
     public int getPort() {
         return port;
-    }
-
-    @JsonProperty
-    public String getPrefix() {
-        return prefix;
-    }
-
-    @JsonProperty
-    public String getSeparator() {
-        return separator;
-    }
-
-    @JsonProperty
-    public Boolean getIncludeHost() {
-        return includeHost;
     }
 
     @JsonProperty
@@ -106,5 +72,26 @@ public class StackdriverEmitterConfig {
     @JsonProperty
     public String getMetricMapPath() {
         return metricMapPath;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof StackdriverEmitterConfig)) {
+            return false;
+        }
+
+        StackdriverEmitterConfig that = (StackdriverEmitterConfig) o;
+
+        return getPort() == that.getPort() &&
+                getConsumeDelay() == that.getConsumeDelay() &&
+                getFlushThreshold() == that.getFlushThreshold() &&
+                getHost().equals(that.getHost()) &&
+                getMaxQueueSize() == that.getMaxQueueSize() &&
+                getMetricMapPath().equals(that.getMetricMapPath()) &&
+                getProjectId().equals(that.getProjectId());
     }
 }

@@ -35,10 +35,10 @@ public class EventConverter {
         HashMap<String, String> metricLabels = new HashMap<String, String>();
 
         // todo: do we need service and host?
-//        String service = event.getService().replace(':', '_');
-//        String host = event.getHost().replace(':', '_');
-//        metricLabels.put("service", service);
-//        metricLabels.put("host", host);
+        String service = event.getService();
+        String host = event.getHost();
+        metricLabels.put("service", service);
+        metricLabels.put("host", host);
 
         Map<String, Object> userDims = event.getUserDims();
         for (String dim : metricMap.get(metric)) {
