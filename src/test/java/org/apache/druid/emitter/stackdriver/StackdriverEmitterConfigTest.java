@@ -1,8 +1,7 @@
-package net.scholtzan.emitter.stackdriver;
+package org.apache.druid.emitter.stackdriver;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import junit.framework.Assert;
 import junit.framework.TestCase;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,10 +17,10 @@ public class StackdriverEmitterConfigTest extends TestCase {
 
     @Test
     public void testSerDeserStackdriverEmitterConfig() throws Exception {
-        StackdriverEmitterConfig stackdriverEmitterConfig = new StackdriverEmitterConfig("localhost", 9999, 2000, 2000, 200L, "test", null);
+        StackdriverEmitterConfig stackdriverEmitterConfig = new StackdriverEmitterConfig(2000, 2000, 200L, "test", null);
         String stackdriverEmitterConfigString = mapper.writeValueAsString(stackdriverEmitterConfig);
         StackdriverEmitterConfig expectedStackdriverEmitterConfig = mapper.readerFor(StackdriverEmitterConfig.class)
                 .readValue(stackdriverEmitterConfigString);
-        Assert.assertEquals(expectedStackdriverEmitterConfig, stackdriverEmitterConfig);
+        assertEquals(expectedStackdriverEmitterConfig, stackdriverEmitterConfig);
     }
 }

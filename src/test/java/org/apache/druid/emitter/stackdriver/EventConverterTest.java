@@ -1,4 +1,4 @@
-package net.scholtzan.emitter.stackdriver;
+package org.apache.druid.emitter.stackdriver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import junit.framework.TestCase;

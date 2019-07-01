@@ -1,8 +1,7 @@
-package net.scholtzan.emitter.stackdriver;
+package org.apache.druid.emitter.stackdriver;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Strings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -54,7 +53,7 @@ public class EventConverter {
     private Map<String, Set<String>> readMap(ObjectMapper mapper, String metricMapPath) {
         try {
             InputStream is;
-            if (Strings.isNullOrEmpty(metricMapPath)) {
+            if (metricMapPath == null || metricMapPath.isEmpty()) {
                 log.info("Using default metric map");
                 is = this.getClass().getClassLoader().getResourceAsStream("defaultMetrics.json");
             } else {

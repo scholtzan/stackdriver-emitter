@@ -1,8 +1,7 @@
-package net.scholtzan.emitter.stackdriver;
+package org.apache.druid.emitter.stackdriver;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.cloud.monitoring.v3.MetricServiceClient;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
@@ -20,10 +19,8 @@ public class StackdriverEmitter implements Emitter {
     private final EventConverter converter;
     private final AtomicBoolean started = new AtomicBoolean(false);
 
-    public StackdriverEmitter(MetricServiceClient client, StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
+    public StackdriverEmitter(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
         this.sender = new StackdriverSender(
-                config.getHost(),
-                config.getPort(),
                 config.getFlushThreshold(),
                 config.getMaxQueueSize(),
                 config.getConsumeDelay(),
@@ -33,8 +30,8 @@ public class StackdriverEmitter implements Emitter {
     }
 
     static StackdriverEmitter of(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
-        MetricServiceClient client = MetricServiceClient.create();
-        return new StackdriverEmitter(client, config, mapper);
+        log.error("Start StackdriverEmitter");
+        return new StackdriverEmitter(config, mapper);
     }
 
     @Override

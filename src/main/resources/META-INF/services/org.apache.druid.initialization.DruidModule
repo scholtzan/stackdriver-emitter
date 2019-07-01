@@ -1,1 +1,1 @@
-net.scholtzan.emitter.stackdriver.StackdriverEmitterModule
+org.apache.druid.emitter.stackdriver.StackdriverEmitterModule

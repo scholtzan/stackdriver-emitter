@@ -1,14 +1,12 @@
-package net.scholtzan.emitter.stackdriver;
+package org.apache.druid.emitter.stackdriver;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.logger.Logger;
 
 public class StackdriverEmitterConfig {
-    @JsonProperty
-    private final String hostname;
-    @JsonProperty
-    private final Integer port;
+    private static final Logger log = new Logger(StackdriverEmitterConfig.class);
+
     @JsonProperty
     private final Integer flushThreshold;
     @JsonProperty
@@ -22,31 +20,19 @@ public class StackdriverEmitterConfig {
 
     @JsonCreator
     public StackdriverEmitterConfig(
-            @JsonProperty("hostname") String hostname,
-            @JsonProperty("port") Integer port,
             @JsonProperty("flushThreshold") Integer flushThreshold,
             @JsonProperty("maxQueueSize") Integer maxQueueSize,
             @JsonProperty("consumeDelay") Long consumeDelay,
             @JsonProperty("projectId") String projectId,
             @JsonProperty("metricMapPath") String metricMapPath
     ) {
-        this.hostname = Preconditions.checkNotNull(hostname, "Stackdriver hostname cannot be null.");
-        this.port = Preconditions.checkNotNull(port, "Stackdriver port cannot be null.");
+        log.error("Stackdriver set config values");
+        log.error("project id " + projectId);
         this.flushThreshold = flushThreshold != null ? flushThreshold : 0;
         this.maxQueueSize = maxQueueSize != null ? maxQueueSize : 0;
         this.consumeDelay = consumeDelay != null ? consumeDelay : 0;
         this.projectId = projectId != null ? projectId : "";
         this.metricMapPath = metricMapPath != null ? metricMapPath : "";
-    }
-
-    @JsonProperty
-    public String getHost() {
-        return hostname;
-    }
-
-    @JsonProperty
-    public int getPort() {
-        return port;
     }
 
     @JsonProperty
@@ -86,10 +72,8 @@ public class StackdriverEmitterConfig {
 
         StackdriverEmitterConfig that = (StackdriverEmitterConfig) o;
 
-        return getPort() == that.getPort() &&
-                getConsumeDelay() == that.getConsumeDelay() &&
+        return getConsumeDelay() == that.getConsumeDelay() &&
                 getFlushThreshold() == that.getFlushThreshold() &&
-                getHost().equals(that.getHost()) &&
                 getMaxQueueSize() == that.getMaxQueueSize() &&
                 getMetricMapPath().equals(that.getMetricMapPath()) &&
                 getProjectId().equals(that.getProjectId());
