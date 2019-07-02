@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.logger.Logger;
 
+/**
+ * Plugin configuration handler.
+ */
 public class StackdriverEmitterConfig {
     private static final Logger log = new Logger(StackdriverEmitterConfig.class);
 
@@ -26,8 +29,6 @@ public class StackdriverEmitterConfig {
             @JsonProperty("projectId") String projectId,
             @JsonProperty("metricMapPath") String metricMapPath
     ) {
-        log.error("Stackdriver set config values");
-        log.error("project id " + projectId);
         this.flushThreshold = flushThreshold != null ? flushThreshold : 0;
         this.maxQueueSize = maxQueueSize != null ? maxQueueSize : 0;
         this.consumeDelay = consumeDelay != null ? consumeDelay : 0;

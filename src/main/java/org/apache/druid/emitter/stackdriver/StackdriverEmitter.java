@@ -10,16 +10,17 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Processes emitted druid events.
+ */
 public class StackdriverEmitter implements Emitter {
-
     private static final Logger log = new Logger(StackdriverEmitter.class);
-    private static final char DRUID_METRIC_SEPARATOR = '/';
 
     private final StackdriverSender sender;
     private final EventConverter converter;
     private final AtomicBoolean started = new AtomicBoolean(false);
 
-    public StackdriverEmitter(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
+    private StackdriverEmitter(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
         this.sender = new StackdriverSender(
                 config.getFlushThreshold(),
                 config.getMaxQueueSize(),
@@ -30,7 +31,6 @@ public class StackdriverEmitter implements Emitter {
     }
 
     static StackdriverEmitter of(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
-        log.error("Start StackdriverEmitter");
         return new StackdriverEmitter(config, mapper);
     }
 
@@ -38,7 +38,6 @@ public class StackdriverEmitter implements Emitter {
     public void start() {
         synchronized (started) {
             if (!started.get()) {
-                log.info("Start Stackdriver emitter.");
                 sender.start();
                 started.set(true);
             }
@@ -51,7 +50,7 @@ public class StackdriverEmitter implements Emitter {
             log.error("emit() called before service was started.");
         } else {
             if (event instanceof ServiceMetricEvent) {
-                StackdriverEvent metricEvent = converter.convert((ServiceMetricEvent) event);
+                StackdriverMetricTimeseries metricEvent = converter.convert((ServiceMetricEvent) event);
 
                 if (metricEvent != null) {
                     sender.enqueue(metricEvent);

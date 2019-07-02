@@ -14,52 +14,60 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class EventConverter {
+/**
+ * Converts emitted druid events to Stackdriver time series.
+ */
+class EventConverter {
     private static final Logger log = new Logger(EventConverter.class);
     private final Map<String, Set<String>> metricMap;
 
-    public EventConverter(ObjectMapper mapper, String metricMapPath) {
+    EventConverter(ObjectMapper mapper, String metricMapPath) {
         metricMap = readMap(mapper, metricMapPath);
     }
 
-    public StackdriverEvent convert(ServiceMetricEvent event) {
+    StackdriverMetricTimeseries convert(ServiceMetricEvent event) {
         String metric = event.getMetric();
-        if (!metricMap.containsKey(metric)) {
-            return null;
-        }
 
-        long timestamp = event.getCreatedTime().getMillis() / 1000L;
+        long timestamp = event.getCreatedTime().getMillis();
         Number value = event.getValue();
 
-        HashMap<String, String> metricLabels = new HashMap<String, String>();
+        HashMap<String, String> metricLabels = new HashMap<>();
 
-        // todo: do we need service and host?
         String service = event.getService();
         String host = event.getHost();
         metricLabels.put("service", service);
         metricLabels.put("host", host);
 
         Map<String, Object> userDims = event.getUserDims();
-        for (String dim : metricMap.get(metric)) {
-            if (userDims.containsKey(dim)) {
-                Object dimValue = userDims.get(dim);
-                metricLabels.put(dim, dimValue.toString());
+
+        // if the metric map is empty then all emitted events will be sent to Stackdriver
+        if (metricMap.isEmpty()) {
+            for (Map.Entry<String, Object> entry : userDims.entrySet()) {
+                metricLabels.put(entry.getKey(), entry.getValue().toString());
+            }
+        } else {
+            for (String dim : metricMap.get(metric)) {
+                if (userDims.containsKey(dim)) {
+                    Object dimValue = userDims.get(dim);
+                    metricLabels.put(dim, dimValue.toString());
+                }
             }
         }
 
-        return new StackdriverEvent(metric, value, timestamp, metricLabels);
+        return new StackdriverMetricTimeseries(metric, value, timestamp, metricLabels);
     }
 
     private Map<String, Set<String>> readMap(ObjectMapper mapper, String metricMapPath) {
         try {
             InputStream is;
             if (metricMapPath == null || metricMapPath.isEmpty()) {
-                log.info("Using default metric map");
-                is = this.getClass().getClassLoader().getResourceAsStream("defaultMetrics.json");
+                log.info("Use all metrics");
+                return new HashMap<>();
             } else {
                 log.info("Using default metric map located at [%s]", metricMapPath);
                 is = new FileInputStream(new File(metricMapPath));
             }
+
             return mapper.readerFor(new TypeReference<Map<String, Set<String>>>() {
             }).readValue(is);
         } catch (IOException e) {

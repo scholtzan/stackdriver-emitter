@@ -34,17 +34,10 @@ public class EventConverterTest extends TestCase {
         expectedTags.put("dataSource", "foo:bar");
         expectedTags.put("type", "groupBy");
 
-        StackdriverEvent stackdriverEvent = converter.convert(configuredEvent);
-        assertEquals("query/time", stackdriverEvent.getEventPath());
-        assertEquals(dateTime.getMillis() / 1000L, stackdriverEvent.getTimestamp());
-        assertEquals(10, stackdriverEvent.getValue());
+        StackdriverMetricTimeseries stackdriverEvent = converter.convert(configuredEvent);
+        assertEquals("query/time", stackdriverEvent.getMetricType());
+        assertEquals(dateTime.getMillis(), stackdriverEvent.getPoints().get(0).getTimestamp());
+        assertEquals(10, stackdriverEvent.getPoints().get(0).getValue());
         assertEquals(expectedTags, stackdriverEvent.getMetricLabels());
-
-        ServiceMetricEvent notConfiguredEvent = new ServiceMetricEvent.Builder()
-                .setDimension("dataSource", "data-source")
-                .setDimension("type", "groupBy")
-                .build(dateTime, "foo/bar", 10)
-                .build("broker", "brokerHost1");
-        assertNull(converter.convert(notConfiguredEvent));
     }
 }

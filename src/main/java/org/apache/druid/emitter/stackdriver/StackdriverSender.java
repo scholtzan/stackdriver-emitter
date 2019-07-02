@@ -2,36 +2,42 @@ package org.apache.druid.emitter.stackdriver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 
-public class StackdriverSender {
-    private static final String CUSTOM_METRIC_DOMAIN = "custom.googleapis.com/druid/";
-
+/**
+ * Sends converted events to the Stackdriver API.
+ */
+class StackdriverSender {
     private static final Logger log = new Logger(StackdriverSender.class);
     private final ScheduledExecutorService scheduler;
     private final long consumeDelay;
-    private final BlockingQueue<StackdriverEvent> eventQueue;
+    private final BlockingQueue<StackdriverMetricTimeseries> eventQueue;
     private final int flushThreshold;
     private final EventConsumer consumer;
     private final String projectId;
 
-    public StackdriverSender(
+    StackdriverSender(
             int flushThreshold,
             int maxQueueSize,
             long consumeDelay,
-            String projectId) throws IOException {
+            String projectId) {
         this.flushThreshold = flushThreshold;
         this.consumeDelay = consumeDelay;
-        this.eventQueue = new ArrayBlockingQueue<StackdriverEvent>(maxQueueSize);
+        this.eventQueue = new ArrayBlockingQueue<>(maxQueueSize);
         this.scheduler = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
                 .setDaemon(true)
                 .setNameFormat("Stackdriver-%s")
@@ -40,8 +46,8 @@ public class StackdriverSender {
         this.projectId = projectId;
     }
 
-    public void start() {
-        scheduler.scheduleWithFixedDelay(
+    void start() {
+        scheduler.scheduleAtFixedRate(
                 consumer,
                 consumeDelay,
                 consumeDelay,
@@ -49,52 +55,90 @@ public class StackdriverSender {
         );
     }
 
-    public void enqueue(StackdriverEvent event) {
-        log.error("Enqueue");
+    void enqueue(StackdriverMetricTimeseries event) {
         if (!eventQueue.offer(event)) {
-            log.error("Error enqueueing event: " + event);
+            log.error("Error enqueueing event: " + event.getMetricType());
         }
     }
 
-    public void flush() {
-        //todo: FLUSH_TIMEOUT?
+    void flush() {
         consumer.sendEvents();
     }
 
-    public void close() {
+    void close() {
         flush();
         scheduler.shutdown();
     }
 
     private class EventConsumer implements Runnable {
-        private final List<StackdriverEvent> events;
+        private final List<StackdriverMetricTimeseries> events;
 
-        public EventConsumer() {
-            events = new ArrayList<StackdriverEvent>(flushThreshold);
+        EventConsumer() {
+            events = new ArrayList<>();
         }
 
         @Override
         public void run() {
             while (!eventQueue.isEmpty() && !scheduler.isShutdown()) {
-                StackdriverEvent metric = eventQueue.poll();
-                events.add(metric);
-
                 if (events.size() > flushThreshold) {
                     sendEvents();
                 }
+
+                final StackdriverMetricTimeseries metric = eventQueue.poll();
+
+                for (int i = 0; i < events.size(); i++) {
+                    if (metric != null && events.get(i).getMetricType().equals(metric.getMetricType())) {
+                        StackdriverMetricTimeseries updatedEvent = events.get(i);
+                        updatedEvent.addPoints(metric.getPoints());
+                        events.set(i, updatedEvent);
+                        return;
+                    }
+                }
+
+                events.add(metric);
             }
         }
 
-        public void sendEvents() {
+        void sendEvents() {
             if (!events.isEmpty()) {
-                // todo: events of the same metric can be put into one time series
-                HttpPost request = new HttpPost("https://monitoring.googleapis.com/v3/projects/" + projectId + "/timeSeries");
+                HttpClient httpclient = HttpClients.createDefault();
+                String url = "https://monitoring.googleapis.com/v3/projects/" + projectId + "/timeSeries";
+                HttpPost request = new HttpPost(url);
+
                 StackdriverTimeseriesPayload payload = new StackdriverTimeseriesPayload(events);
                 ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+
                 try {
+                    // get credentials stored in environment variable for authenticating to Stackdriver API
+                    String credentialsFile = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
+                    File initialFile = new File(credentialsFile);
+                    InputStream targetStream = new FileInputStream(initialFile);
+                    GoogleCredentials cred = GoogleCredentials.fromStream(targetStream).createScoped(
+                            Collections.singletonList("https://www.googleapis.com/auth/monitoring")
+                    );
+                    String token = cred.refreshAccessToken().getTokenValue();
+                    request.addHeader("Authorization", "Bearer " + token);
+
+                    // create event JSON payload
                     String jsonPayload = ow.writeValueAsString(payload);
-                    request.setEntity(new StringEntity(jsonPayload, ContentType.DEFAULT_TEXT));
-                    request.addHeader("content-type", "application/x-www-form-urlencoded");
+                    request.setEntity(new StringEntity(jsonPayload));
+                    request.addHeader("Content-type", "application/json");
+
+                    try {
+                        ByteArrayOutputStream outstream = new ByteArrayOutputStream();
+                        HttpResponse response = httpclient.execute(request);
+
+                        // todo: remove; just for debugging
+                        response.getEntity().writeTo(outstream);
+                        String responseBody = new String(outstream.toByteArray());
+                        log.info("Request response: " + responseBody);
+                    } catch (IOException ex) {
+                        log.info(ex, "Failed to post events to Stackdriver.");
+                    } finally {
+                        request.releaseConnection();
+                    }
+
+                    events.clear();
                 } catch (Exception e) {
                     log.error("Could not serialize payload: " + e.toString());
                 }
@@ -102,10 +146,14 @@ public class StackdriverSender {
         }
 
         private class StackdriverTimeseriesPayload {
-            private List<StackdriverEvent> timeSeries;
+            private List<StackdriverMetricTimeseries> timeSeries;
 
-            public StackdriverTimeseriesPayload(List<StackdriverEvent> events) {
+            StackdriverTimeseriesPayload(List<StackdriverMetricTimeseries> events) {
                 this.timeSeries = events;
+            }
+
+            public List<StackdriverMetricTimeseries> getTimeSeries() {
+                return timeSeries;
             }
         }
     }

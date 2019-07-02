@@ -22,12 +22,13 @@ public class StackdriverEventTest extends TestCase {
     public void testEventSerialization() throws Exception {
         HashMap<String, String> labels = new HashMap<>();
         labels.put("test", "ping");
-        StackdriverEvent event = new StackdriverEvent("foo/bar", 42, 1562008168973L, labels);
+        StackdriverMetricTimeseries event = new StackdriverMetricTimeseries("foo/bar", 42, 1562008168973L, labels);
         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
         String jsonEvent = ow.writeValueAsString(event);
+        System.out.println(jsonEvent);
         String expectedJson = "{\n" +
                 "  \"metric\" : {\n" +
-                "    \"type\" : \"foo/bar\",\n" +
+                "    \"type\" : \"custom.googleapis.com/druid/foo/bar\",\n" +
                 "    \"labels\" : {\n" +
                 "      \"test\" : \"ping\"\n" +
                 "    }\n" +
@@ -37,12 +38,15 @@ public class StackdriverEventTest extends TestCase {
                 "  },\n" +
                 "  \"metricKind\" : \"GAUGE\",\n" +
                 "  \"valueType\" : \"INT64\",\n" +
-                "  \"points\" : {\n" +
+                "  \"points\" : [ {\n" +
                 "    \"interval\" : {\n" +
                 "      \"endTime\" : \"2019-07-01T12:09:28.973Z\",\n" +
                 "      \"startTime\" : \"2019-07-01T12:09:28.973Z\"\n" +
+                "    },\n" +
+                "    \"value\" : {\n" +
+                "      \"int64Value\" : \"42\"\n" +
                 "    }\n" +
-                "  }\n" +
+                "  } ]\n" +
                 "}";
         assertEquals(expectedJson, jsonEvent);
     }

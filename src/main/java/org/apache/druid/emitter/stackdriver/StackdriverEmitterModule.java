@@ -34,7 +34,6 @@ public class StackdriverEmitterModule implements DruidModule {
     @ManageLifecycle
     @Named(EMITTER_TYPE)
     public Emitter getEmitter(StackdriverEmitterConfig config, ObjectMapper mapper) throws IOException {
-        log.error("get emitter Stackdriver");
         return StackdriverEmitter.of(config, mapper);
     }
 }
