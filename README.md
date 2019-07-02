@@ -55,3 +55,10 @@ druid.extensions.loadList=[..., "stackdriver-emitter", ...]
 The emitted metric events should appear in Stackdriver:
 
 ![Screenshot metrics in Stackdriver](/stackdriver-screenshot.png)
+
+
+## Resources
+
+* [Stackdriver Monitoring API](https://cloud.google.com/monitoring/api/ref_v3/rest/)
+* [GKE Credentials Configuration](https://stackoverflow.com/questions/47021469/how-to-set-google-application-credentials-on-gke-running-through-kubernetes)
+* [Druid Plugins](https://github.com/apache/incubator-druid/tree/master/extensions-contrib)

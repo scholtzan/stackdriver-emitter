@@ -86,6 +86,8 @@ class StackdriverSender {
 
                 final StackdriverMetricTimeseries metric = eventQueue.poll();
 
+                // see: https://cloud.google.com/monitoring/api/ref_v3/rest/
+                // events with the same metric descriptor must be sent as single time series per request
                 for (int i = 0; i < events.size(); i++) {
                     if (metric != null && events.get(i).getMetricType().equals(metric.getMetricType())) {
                         StackdriverMetricTimeseries updatedEvent = events.get(i);
