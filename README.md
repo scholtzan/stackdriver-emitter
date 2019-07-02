@@ -49,3 +49,9 @@ The extension must also be registered in the config file:
 ```yaml
 druid.extensions.loadList=[..., "stackdriver-emitter", ...]
 ```
+
+## Metrics in Stackdriver
+
+The emitted metric events should appear in Stackdriver:
+
+![Screenshot metrics in Stackdriver](/stackdriver-screenshot.png)
