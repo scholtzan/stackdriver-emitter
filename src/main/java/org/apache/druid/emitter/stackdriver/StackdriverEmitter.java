@@ -1,6 +1,5 @@
 package org.apache.druid.emitter.stackdriver;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;

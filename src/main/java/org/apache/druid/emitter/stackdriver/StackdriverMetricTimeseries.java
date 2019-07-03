@@ -138,7 +138,7 @@ class StackdriverMetricTimeseriesSerializer extends StdSerializer<StackdriverMet
             jgen.writeEndObject();
 
             jgen.writeObjectFieldStart("value");
-            jgen.writeStringField("int64Value", String.valueOf(point.getValue().intValue()));
+            jgen.writeStringField("int64Value", String.valueOf(point.getValue().longValue()));
             jgen.writeEndObject();
 
             jgen.writeEndObject();
