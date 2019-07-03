@@ -13,7 +13,6 @@ import org.apache.http.impl.client.HttpClients;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
@@ -72,6 +71,9 @@ class StackdriverSender {
 
     private class EventConsumer implements Runnable {
         private final List<StackdriverMetricTimeseries> events;
+        // keeps track of how many emitted events are going to be sent to Stackdriver
+        // separate counter because some events get merged together in `events` into a time series (so .size() doesn't work)
+        private int eventCount = 0;
 
         EventConsumer() {
             events = new ArrayList<>();
@@ -80,24 +82,32 @@ class StackdriverSender {
         @Override
         public void run() {
             while (!eventQueue.isEmpty() && !scheduler.isShutdown()) {
-                if (events.size() > flushThreshold) {
+                if (eventCount > flushThreshold) {
                     sendEvents();
                 }
 
                 final StackdriverMetricTimeseries metric = eventQueue.poll();
 
                 // see: https://cloud.google.com/monitoring/api/ref_v3/rest/
-                // events with the same metric descriptor must be sent as single time series per request
+                // events with the same metric descriptor _must_ be sent as single time series per request
+                boolean existingMetric = false;
                 for (int i = 0; i < events.size(); i++) {
-                    if (metric != null && events.get(i).getMetricType().equals(metric.getMetricType())) {
+                    if (metric != null &&
+                        events.get(i).getMetricType().equals(metric.getMetricType()) &&
+                        events.get(i).getMetricLabels().equals(metric.getMetricLabels())) {
                         StackdriverMetricTimeseries updatedEvent = events.get(i);
                         updatedEvent.addPoints(metric.getPoints());
                         events.set(i, updatedEvent);
-                        return;
+                        existingMetric = true;
+                        break;
                     }
                 }
 
-                events.add(metric);
+                if (!existingMetric) {
+                    events.add(metric);
+                }
+
+                eventCount += 1;
             }
         }
 
@@ -120,29 +130,28 @@ class StackdriverSender {
                     );
                     String token = cred.refreshAccessToken().getTokenValue();
                     request.addHeader("Authorization", "Bearer " + token);
-
-                    // create event JSON payload
-                    String jsonPayload = ow.writeValueAsString(payload);
-                    request.setEntity(new StringEntity(jsonPayload));
-                    request.addHeader("Content-type", "application/json");
-
                     try {
-                        ByteArrayOutputStream outstream = new ByteArrayOutputStream();
-                        HttpResponse response = httpclient.execute(request);
+                        // create event JSON payload
+                        String jsonPayload = ow.writeValueAsString(payload);
+                        request.setEntity(new StringEntity(jsonPayload));
+                        request.addHeader("Content-type", "application/json");
 
-                        // todo: remove; just for debugging
-                        response.getEntity().writeTo(outstream);
-                        String responseBody = new String(outstream.toByteArray());
-                        log.info("Request response: " + responseBody);
-                    } catch (IOException ex) {
-                        log.info(ex, "Failed to post events to Stackdriver.");
-                    } finally {
-                        request.releaseConnection();
+                        try {
+                            httpclient.execute(request);
+                        } catch (IOException ex) {
+                            log.info(ex, "Failed to post events to Stackdriver.");
+                        } finally {
+                            request.releaseConnection();
+                        }
+
+                        events.clear();
+                        eventCount = 0;
+                    } catch (Exception e) {
+                        log.error("Could not serialize payload: " + e.toString());
                     }
-
-                    events.clear();
-                } catch (Exception e) {
-                    log.error("Could not serialize payload: " + e.toString());
+                }
+                catch (Exception e) {
+                    log.error("Error retrieving Google credentials: " + e);
                 }
             }
         }

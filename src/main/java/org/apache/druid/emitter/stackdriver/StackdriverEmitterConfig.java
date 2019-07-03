@@ -22,7 +22,7 @@ public class StackdriverEmitterConfig {
     private final String metricMapPath;
 
     @JsonCreator
-    public StackdriverEmitterConfig(
+    StackdriverEmitterConfig(
             @JsonProperty("flushThreshold") Integer flushThreshold,
             @JsonProperty("maxQueueSize") Integer maxQueueSize,
             @JsonProperty("consumeDelay") Long consumeDelay,
@@ -37,27 +37,27 @@ public class StackdriverEmitterConfig {
     }
 
     @JsonProperty
-    public int getFlushThreshold() {
+    int getFlushThreshold() {
         return flushThreshold;
     }
 
     @JsonProperty
-    public int getMaxQueueSize() {
+    int getMaxQueueSize() {
         return maxQueueSize;
     }
 
     @JsonProperty
-    public long getConsumeDelay() {
+    long getConsumeDelay() {
         return consumeDelay;
     }
 
     @JsonProperty
-    public String getProjectId() {
+    String getProjectId() {
         return projectId;
     }
 
     @JsonProperty
-    public String getMetricMapPath() {
+    String getMetricMapPath() {
         return metricMapPath;
     }
 

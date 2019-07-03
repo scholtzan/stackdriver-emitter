@@ -19,13 +19,23 @@ public class StackdriverEventTest extends TestCase {
     }
 
     @Test
+    public void testAddingPoints() {
+        HashMap<String, String> labels = new HashMap<>();
+        StackdriverMetricTimeseries p1 = new StackdriverMetricTimeseries("test1", 23, 1000L, labels);
+        StackdriverMetricTimeseries p2 = new StackdriverMetricTimeseries("test2", 54, 1000L, labels);
+        assertEquals(p1.getPoints().size(), 1);
+        p1.addPoints(p2.getPoints());
+        assertEquals(p1.getPoints().size(), 2);
+    }
+
+    @Test
     public void testEventSerialization() throws Exception {
         HashMap<String, String> labels = new HashMap<>();
         labels.put("test", "ping");
-        StackdriverMetricTimeseries event = new StackdriverMetricTimeseries("foo/bar", 42, 1562008168973L, labels);
+        StackdriverMetricTimeseries event = new StackdriverMetricTimeseries("foo/bar", 42.0, 1562008168973L, labels);
         ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+
         String jsonEvent = ow.writeValueAsString(event);
-        System.out.println(jsonEvent);
         String expectedJson = "{\n" +
                 "  \"metric\" : {\n" +
                 "    \"type\" : \"custom.googleapis.com/druid/foo/bar\",\n" +
@@ -48,6 +58,7 @@ public class StackdriverEventTest extends TestCase {
                 "    }\n" +
                 "  } ]\n" +
                 "}";
+
         assertEquals(expectedJson, jsonEvent);
     }
 }

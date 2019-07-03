@@ -19,7 +19,7 @@ import java.util.*;
 public class StackdriverMetricTimeseries {
     private final String metricType;
     private final HashMap<String, String> metricLabels;
-    private List<Point> points;
+    private ArrayList<Point> points;
 
     StackdriverMetricTimeseries(
             @NotNull String eventPath,
@@ -28,7 +28,8 @@ public class StackdriverMetricTimeseries {
             HashMap<String, String> metricLabels
     ) {
         this.metricType = eventPath;
-        this.points = Collections.singletonList(new Point(timestamp, value));
+        this.points = new ArrayList<>();
+        this.points.add(new Point(timestamp, value));
         this.metricLabels = metricLabels != null ? metricLabels : new HashMap<String, String>();
     }
 
@@ -44,7 +45,7 @@ public class StackdriverMetricTimeseries {
         this.points.addAll(points);
     }
 
-    List<Point> getPoints() {
+    ArrayList<Point> getPoints() {
         return points;
     }
 
@@ -137,7 +138,7 @@ class StackdriverMetricTimeseriesSerializer extends StdSerializer<StackdriverMet
             jgen.writeEndObject();
 
             jgen.writeObjectFieldStart("value");
-            jgen.writeStringField("int64Value", point.getValue().toString());
+            jgen.writeStringField("int64Value", String.valueOf(point.getValue().intValue()));
             jgen.writeEndObject();
 
             jgen.writeEndObject();
