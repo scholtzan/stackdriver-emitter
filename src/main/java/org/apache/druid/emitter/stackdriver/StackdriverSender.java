@@ -30,12 +30,13 @@ class StackdriverSender {
     private final int flushThreshold;
     private final EventConsumer consumer;
     private final String projectId;
+    private final CredentialsProvider credentials;
 
     StackdriverSender(
             int flushThreshold,
             int maxQueueSize,
             long consumeDelay,
-            String projectId) {
+            String projectId) throws IOException {
         this.flushThreshold = flushThreshold;
         this.consumeDelay = consumeDelay;
         this.eventQueue = new ArrayBlockingQueue<>(maxQueueSize);
@@ -45,6 +46,7 @@ class StackdriverSender {
                 .build());
         this.consumer = new EventConsumer();
         this.projectId = projectId;
+        this.credentials = new CredentialsProvider();
     }
 
     void start() {
@@ -123,15 +125,7 @@ class StackdriverSender {
                 ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
 
                 try {
-                    // get credentials stored in environment variable for authenticating to Stackdriver API
-                    String credentialsFile = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
-                    File initialFile = new File(credentialsFile);
-                    InputStream targetStream = new FileInputStream(initialFile);
-                    GoogleCredentials cred = GoogleCredentials.fromStream(targetStream).createScoped(
-                            Collections.singletonList("https://www.googleapis.com/auth/monitoring")
-                    );
-                    String token = cred.refreshAccessToken().getTokenValue();
-                    request.addHeader("Authorization", "Bearer " + token);
+                    request.addHeader("Authorization", "Bearer " + credentials.getAccessToken());
                     try {
                         // create event JSON payload
                         String jsonPayload = ow.writeValueAsString(payload);
@@ -151,9 +145,8 @@ class StackdriverSender {
                     } catch (Exception e) {
                         log.error("Could not serialize payload: " + e.toString());
                     }
-                }
-                catch (Exception e) {
-                    log.error("Error retrieving Google credentials: " + e);
+                } catch (Exception e) {
+                    log.error("Error getting access token: " + e.toString());
                 }
             }
         }
