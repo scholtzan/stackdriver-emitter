@@ -27,6 +27,7 @@ public class StackdriverEmitterModule implements DruidModule {
 
     @Override
     public void configure(Binder binder) {
+        log.info("Configuring Stackdriver emitter");
         JsonConfigProvider.bind(binder, "druid.emitter." + EMITTER_TYPE, StackdriverEmitterConfig.class);
     }
 
