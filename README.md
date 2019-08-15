@@ -1,5 +1,7 @@
 # Stackdriver Emitter Plugin for Druid
 
+Custom extension for sending metric events from [Apache Druid](https://github.com/apache/incubator-druid) to [Google Stackdriver](https://github.com/apache/incubator-druid).
+
 ## Getting it working in Druid
 
 Run `mvn package` to create a `.jar` file that contains all dependencies.

@@ -131,7 +131,7 @@ class StackdriverSender {
                         String jsonPayload = ow.writeValueAsString(payload);
                         request.setEntity(new StringEntity(jsonPayload));
                         request.addHeader("Content-type", "application/json");
-                        
+
                         try {
                             httpclient.execute(request);
                         } catch (IOException ex) {
